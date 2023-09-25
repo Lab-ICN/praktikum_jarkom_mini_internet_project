@@ -9,6 +9,11 @@ if [[ $(id -u) -ne 0 ]]; then
         exit 1
 fi
 
+if [[ $(docker ps -af "status=exited" --format {{.Names}} | wc -l) -eq 0 ]]; then
+        echo "Your mini project is fine, exiting..."
+        exit 0
+fi
+
 # Ensure the kernel modules load first
 modprobe mpls_router \
          mpls_gso \
