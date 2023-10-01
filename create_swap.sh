@@ -37,7 +37,7 @@ cat res.txt | tee /usr/bin/init-zram-swapping
 sleep 2
 
 echo "Changing PRIO into 100 on init-zram-swapping script"
-sed 's/-p 5/-p 100/1' /usr/bin/init-zram-swapping > res.txt
+sed 's/-p [0-9]+/-p 100/1' /usr/bin/init-zram-swapping > res.txt
 cat res.txt | tee /usr/bin/init-zram-swapping
 rm res.txt
 
