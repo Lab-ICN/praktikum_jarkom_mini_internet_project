@@ -15,7 +15,7 @@ change_directory() {
 
 execute_ssh_port_forward() {
         echo "Adding IP route on host at device ssh_to_group for activate SSH"
-        ip addr add 157.0.0.1/16 dev ssh_to_group
+        ip addr add 157.0.0.1/24 dev ssh_to_group
         ip link set ssh_to_group up
 
         echo "Running portforwarding.sh"
