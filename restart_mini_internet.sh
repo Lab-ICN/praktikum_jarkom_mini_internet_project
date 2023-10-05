@@ -115,12 +115,15 @@ soft_restart() {
         containers=$(docker ps -a --format {{.Names}})
         totalContainerCount=$(echo $containers | wc -w)
 
-        currentContainer=1
-        for c in $containers; do
-                echo "Calling restart_container.sh on $c (${currentContainer} of ${totalContainerCount})"
-                ${WORKDIR}groups/restart_container.sh $c
+        for i in $(seq 1 2); do
+                echo "ITERATION: ${i} of 2"
+                currentContainer=1
+                for c in $containers; do
+                        echo "Calling restart_container.sh on $c (${currentContainer} of ${totalContainerCount})"
+                        ${WORKDIR}groups/restart_container.sh $c
 
-                (( currentContainer++ ))
+                        (( currentContainer++ ))
+                done
         done
 
         execute_ssh_port_forward
