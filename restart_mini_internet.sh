@@ -36,7 +36,7 @@ add_vlans_l2() {
                         if [[ ($router_name == "BASE" || $router_name == "ZURI" || $router_name == "GENE") ]]; then
                                 echo "Adding VLAN interfaces to ${rc}"
                                 for vlanId in $(seq 1 3); do
-                                        docker exec -it ${rc} ip link add link ${router_name}-L2 name ${router_name}-L2.(( 10 * $vlanId )) type vlan id $vlanId
+                                        docker exec -it ${rc} ip link add link ${router_name}-L2 name ${router_name}-L2.$(( 10 * $vlanId )) type vlan id $vlanId
                                 done
                         fi
                 fi
