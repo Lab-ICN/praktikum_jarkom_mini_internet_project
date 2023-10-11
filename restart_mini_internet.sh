@@ -31,11 +31,14 @@ add_vlans_l2() {
         for rc in $router_containers; do
                 as_number=$(echo $rc | cut -d '_' -f 1)
                 router_name=$(echo $rc | cut -d '_' -f 2 | sed 's/[a-z]//g')
-                if [ [ $as_number -eq 3 ] || [ $as_number -eq 4 ] || [ $as_number -eq 13 ] || [ $as_number -eq 14 ] ]; then
-                        echo "Adding VLAN interfaces to ${rc}"
-                        for vlanId in $(seq 1 3); do
-                                docker exec -it ${rc} ip link add link ${router_name}-L2 name ${router_name}-L2.(( 10 * $vlanId )) type vlan id $vlanId
-                        done
+                if [[ ($as_number -eq 3 || $as_number -eq 4 || $as_number -eq 13 || $as_number -eq 14) ]]; then
+                        # Filter only BASE ZURI GENE
+                        if [[ ($router_name == "BASE" || $router_name == "ZURI" || $router_name == "GENE") ]]; then
+                                echo "Adding VLAN interfaces to ${rc}"
+                                for vlanId in $(seq 1 3); do
+                                        docker exec -it ${rc} ip link add link ${router_name}-L2 name ${router_name}-L2.(( 10 * $vlanId )) type vlan id $vlanId
+                                done
+                        fi
                 fi
         done
 }
