@@ -51,9 +51,9 @@ reset_with_startup() {
 }
 
 restore_configs() {
-  cd $WORKDIR../students_config/
-
   for as in ${students_as[@]}; do
+    cd $WORKDIR../students_config/
+
     echo "Restoring config on AS: ${as}"
     docker cp ./configs-as-${as}.tar.gz ${as}_ssh:/root/configs-as-${as}.tar.gz
 
@@ -61,6 +61,31 @@ restore_configs() {
     docker exec -iw /root ${as}_ssh bash -c "./restore_configs.sh configs-as-${as}.tar.gz all" << EOF
 Y
 EOF
+
+    # Restore switch files into switch
+    for sw in $(seq 1 4); do
+      # Init switch loc
+      switch_name=S${sw}
+      data_center_loc='DCN'
+      if [[ $switch_name == 'S4' ]]; then
+        data_center_loc='DCS'
+      fi
+
+      container_name=${as}_L2_${data_center_loc}_${switch_name}
+
+      # Extract the config file
+      cd $WORKDIR../students_config/; rm -rf configs_*; tar -xf configs-as-${as}.tar.gz
+
+      # Get configs folder name
+      configs_folder_name=$(ls -d */ | grep configs)
+
+      # Overwrite backuped switch file to the /etc/openvswitch/conf.db
+      docker cp ${configs_folder_name}${switch_name}/switch.db ${container_name}:/etc/openvswitch/conf.db
+
+      # Now restart the container to take effect
+      docker restart $container_name;
+      cd $WORKDIR && sudo ./groups/restart_container.sh $container_name
+    done
   done
 }
 
