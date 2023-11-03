@@ -4,6 +4,7 @@ USER=ubuntu
 
 WORKDIR=/home/${USER}/mini_internet_project/platform/
 students_as=(3 4 13 14)
+routers=("ZURI" "BASE" "GENE" "LUGA" "MUNI" "LYON" "VIEN" "MILA")
 
 # save all configs first
 save_configs() {
@@ -62,8 +63,36 @@ restore_configs() {
 Y
 EOF
 
+    # Extract the config file
+    cd $WORKDIR../students_config/; rm -rf configs_*; tar -xf configs-as-${as}.tar.gz
+    # Get configs folder name
+    configs_folder_name=$(ls -d */ | grep configs)
+
+    # Restore router files
+    for rc in ${routers[@]}; do
+      cd $WORKDIR../students_config/
+
+      container_name=${as}_${rc}router
+
+      # Overwrite backuped router config file to the /etc/frr/frr.conf
+      echo "Restoring $container_name configuration..."
+      docker cp ${configs_folder_name}${rc}/router.conf ${container_name}:/root/frr.conf
+      docker exec -itw /root ${container_name} bash -c 'cat /root/frr.conf > /etc/frr/frr.conf'
+      echo "Verifying $container_name configuration... and sleeping for 4 seconds for you to check..."
+      docker exec -itw /root ${container_name} bash -c 'cat /etc/frr/frr.conf'
+      sleep 4
+      docker exec -itw /root ${container_name} bash -c 'rm /root/frr.conf'
+
+      # Now restart the container to take effect
+      docker restart $container_name;
+      cd $WORKDIR && sudo ./groups/restart_container.sh $container_name
+    done
+    
+    
     # Restore switch files into switch
     for sw in $(seq 1 4); do
+      cd $WORKDIR../students_config/
+
       # Init switch loc
       switch_name=S${sw}
       data_center_loc='DCN'
@@ -73,13 +102,12 @@ EOF
 
       container_name=${as}_L2_${data_center_loc}_${switch_name}
 
-      # Extract the config file
-      cd $WORKDIR../students_config/; rm -rf configs_*; tar -xf configs-as-${as}.tar.gz
 
       # Get configs folder name
       configs_folder_name=$(ls -d */ | grep configs)
 
       # Overwrite backuped switch file to the /etc/openvswitch/conf.db
+      echo "Restoring $container_name configuration..."
       docker cp ${configs_folder_name}${switch_name}/switch.db ${container_name}:/etc/openvswitch/conf.db
 
       # Now restart the container to take effect
