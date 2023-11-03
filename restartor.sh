@@ -117,6 +117,21 @@ EOF
   done
 }
 
+show_passwords() {
+  cd $WORKDIR
+  echo "--- START OF ASes PASSWORDS ---"
+  cat groups/passwords.txt
+  echo "---  END OF ASes PASSWORDS  ---"
+
+  echo "--- START OF krill_passwords ---"
+  cat groups/krill_passwords.txt
+  echo "---  END OF krill_passwords  ---"
+
+  echo "--- START OF MEASUREMENT PASSWORDS ---"
+  cat groups/ssh_measurement.txt
+  echo "---  END OF MEASUREMENT PASSWORDS  ---"
+}
+
 main() {
   if [[ $(id -u) -ne 0 ]]; then
     echo "You must run as root, exiting..."
@@ -126,6 +141,8 @@ main() {
   save_configs
   reset_with_startup
   restore_configs
+  echo "Restart complete, here are all passwords..."
+  show_passwords
 }
 
 main
