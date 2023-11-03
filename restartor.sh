@@ -86,6 +86,13 @@ EOF
       # Now restart the container to take effect
       docker restart $container_name;
       cd $WORKDIR && sudo ./groups/restart_container.sh $container_name
+
+      if [[ ($rc == "BASE" || $rc == "ZURI" || $rc == "GENE") ]]; then
+        echo "Adding VLAN interfaces to ${container_name}"
+        for vlanId in $(seq 1 3); do
+                docker exec -it ${container_name} ip link add link ${rc}-L2 name ${rc}-L2.$(( 10 * $vlanId )) type vlan id $vlanId
+        done
+      fi
     done
     
     
