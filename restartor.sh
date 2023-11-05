@@ -4,7 +4,7 @@ USER=ubuntu
 
 WORKDIR=/home/${USER}/mini_internet_project/platform/
 students_as=(3 4 13 14)
-routers=("ZURI" "BASE" "GENE" "LUGA" "MUNI" "LYON" "VIEN" "MILA")
+routers=('ZURI' 'BASE' 'GENE' 'LUGA' 'MUNI' 'LYON' 'VIEN' 'MILA')
 
 # save all configs first
 save_configs() {
@@ -48,7 +48,6 @@ reset_with_startup() {
   
   # Start MATRIX container
   docker unpause MATRIX
-  ./groups/restart_container.sh MATRIX
 }
 
 restore_configs() {
@@ -77,22 +76,14 @@ EOF
       # Overwrite backuped router config file to the /etc/frr/frr.conf
       echo "Restoring $container_name configuration..."
       docker cp ${configs_folder_name}${rc}/router.conf ${container_name}:/root/frr.conf
-      docker exec -itw /root ${container_name} bash -c 'cat /root/frr.conf > /etc/frr/frr.conf'
-      echo "Verifying $container_name configuration... and sleeping for 4 seconds for you to check..."
-      docker exec -itw /root ${container_name} bash -c 'cat /etc/frr/frr.conf'
-      sleep 4
-      docker exec -itw /root ${container_name} bash -c 'rm /root/frr.conf'
 
-      # Now restart the container to take effect
-      docker restart $container_name;
-      cd $WORKDIR && sudo ./groups/restart_container.sh $container_name
+      # Remove the building configuration and current configuration text
+      docker exec -itw /root ${container_name} bash -c 'sed '1,3d' /root/frr.conf > /root/frr-removed-header.conf'
 
-      if [[ ($rc == "BASE" || $rc == "ZURI" || $rc == "GENE") ]]; then
-        echo "Adding VLAN interfaces to ${container_name}"
-        for vlanId in $(seq 1 3); do
-                docker exec -it ${container_name} ip link add link ${rc}-L2 name ${rc}-L2.$(( 10 * $vlanId )) type vlan id $vlanId
-        done
-      fi
+      docker exec -itw /root ${container_name} bash -c '/usr/lib/frr/frr-reload.py --reload /root/frr-removed-header.conf'
+      sleep 2
+      docker exec -itw /root ${container_name} bash -c 'rm /root/{frr,frr-removed-header}.conf'
+
     done
     
     
@@ -109,17 +100,15 @@ EOF
 
       container_name=${as}_L2_${data_center_loc}_${switch_name}
 
-
       # Get configs folder name
       configs_folder_name=$(ls -d */ | grep configs)
 
       # Overwrite backuped switch file to the /etc/openvswitch/conf.db
       echo "Restoring $container_name configuration..."
-      docker cp ${configs_folder_name}${switch_name}/switch.db ${container_name}:/etc/openvswitch/conf.db
-
-      # Now restart the container to take effect
-      docker restart $container_name;
-      cd $WORKDIR && sudo ./groups/restart_container.sh $container_name
+      docker cp ${configs_folder_name}${switch_name}/switch.db ${container_name}:/root/switch.db
+      docker exec -itw /root ${container_name} bash -c 'ovsdb-client restore < /root/switch.db'
+      sleep 2
+      docker exec -itw /root ${container_name} bash -c 'rm /root/switch.db'
     done
   done
 }
