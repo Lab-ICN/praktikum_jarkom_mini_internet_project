@@ -5,6 +5,7 @@ USER=ubuntu
 WORKDIR=/home/${USER}/mini_internet_project/platform/
 students_as=(3 4 13 14)
 routers=('ZURI' 'BASE' 'GENE' 'LUGA' 'MUNI' 'LYON' 'VIEN' 'MILA')
+dchosts=('FIFA' 'UEFA')
 
 # save all configs first
 save_configs() {
@@ -83,9 +84,30 @@ EOF
       docker exec -itw /root ${container_name} bash -c '/usr/lib/frr/frr-reload.py --reload /root/frr-removed-header.conf'
       sleep 2
       docker exec -itw /root ${container_name} bash -c 'rm /root/{frr,frr-removed-header}.conf'
-
     done
     
+    # Restore router hosts
+    for rc in ${routers[@]}; do
+      cd $WORKDIR../students_config/
+
+      container_name=${as}_${rc}host
+
+      echo "Restoring $container_name configuration..."
+      # Get the IPv4 address
+      ipv4=$(cat ${configs_folder_name}${rc}/host.ip | grep -w inet | grep ${rc}router | awk '{print $2}')
+      echo "Backuped $container_name IPv4: ${ipv4}"
+      # Get the IPv6 address
+      ipv6=$(cat ${configs_folder_name}${rc}/host.ip | grep -w inet6 | grep ${rc}router | awk '{print $2}')
+      echo "Backuped $container_name IPv6: ${ipv6}"
+      # Get default route (IPv4 only?)
+      default_route=$(cat ${configs_folder_name}${rc}/host.route | grep -w default | awk '{print $3}')
+      echo "Backuped $container_name Default Route: ${default_route}"
+
+      # Adding the IPv4 and IPv6 address
+      docker exec -itw /root ${container_name} ip address add ${ipv4} dev ${rc}router &> /dev/null
+      docker exec -itw /root ${container_name} ip address add ${ipv6} dev ${rc}router &> /dev/null
+      docker exec -itw /root ${container_name} ip route add default via ${default_route} &> /dev/null
+    done
     
     # Restore switch files into switch
     for sw in $(seq 1 4); do
@@ -109,6 +131,38 @@ EOF
       docker exec -itw /root ${container_name} bash -c 'ovsdb-client restore < /root/switch.db'
       sleep 2
       docker exec -itw /root ${container_name} bash -c 'rm /root/switch.db'
+    done
+
+    # Restore Datacenter Hosts
+    for dc in ${dchosts[@]}; do
+      for i in $(seq 1 4); do
+        cd $WORKDIR../students_config/
+
+        # Init host loc
+        data_center_loc='DCN'
+        if [[ $i -eq 4 ]]; then
+          data_center_loc='DCS'
+        fi
+
+        hostname=${dc}_${i}
+        container_name=${as}_L2_${data_center_loc}_${hostname}
+
+        echo "Restoring $container_name configuration..."
+        # Get the IPv4 address
+        ipv4=$(cat ${configs_folder_name}${hostname}/host.ip | grep -w inet | grep ${as}-S${i} | awk '{print $2}')
+        echo "Backuped $container_name IPv4: ${ipv4}"
+        # Get the IPv6 address
+        ipv6=$(cat ${configs_folder_name}${hostname}/host.ip | grep -w inet6 | grep ${as}-S${i} | awk '{print $2}')
+        echo "Backuped $container_name IPv6: ${ipv6}"
+        # Get default route (IPv4 only?)
+        default_route=$(cat ${configs_folder_name}${hostname}/host.route | grep -w default | awk '{print $3}')
+        echo "Backuped $container_name Default Route: ${default_route}"
+
+        # Adding the IPv4 and IPv6 address
+        docker exec -itw /root ${container_name} ip address add ${ipv4} dev ${as}-S${i} &> /dev/null
+        docker exec -itw /root ${container_name} ip address add ${ipv6} dev ${as}-S${i} &> /dev/null
+        docker exec -itw /root ${container_name} ip route add default via ${default_route} &> /dev/null
+      done
     done
   done
 }
