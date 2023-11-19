@@ -15,9 +15,10 @@ save_configs() {
   fi
 
   cd students_config/
-  rm -rf *
 
   for as in ${students_as[@]}; do
+    rm -rf configs-as-${as}.tar.gz
+
     echo "Saving config on AS: ${as}"
 
     docker exec -itw /root ${as}_ssh bash -c 'rm -rfv configs*' > /dev/null
