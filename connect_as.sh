@@ -2,7 +2,7 @@
 
 if [ $# -lt 1 ]; then
     echo Invalid argument:
-    echo "./connect_as.sh AS_NUMBER [ixp | ROUTER [h]]"
+    echo "./connect_as.sh AS_NUMBER [ixp | ROUTER [r | h | c]]"
     exit 1
 fi
 
